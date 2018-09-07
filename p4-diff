@@ -22,10 +22,15 @@ def userHasPerforce():
         return True
     return False
 
+def override_env():
+    my_env = os.environ.copy()
+    my_env["P4DIFF"] = 'diff'
+    return my_env
+
 def runCommand(cmd):
     if Verbose:
         print 'Executing: {}'.format(cmd)
-    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=override_env())
     (out,err) = p.communicate()
     if len(err) > 0:
         print 'error: {}'.format(err)
