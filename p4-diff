@@ -128,7 +128,7 @@ def getOpenedFiles(changelist):
             file_revision = None
         assert(fields[1] == '-')
         operation = fields[2]
-        assert(operation in ['add','edit'])
+        assert(operation in ['add','branch','move/delete','move/add','edit','delete','integrate'])
         opened_files.append((operation,file_name,file_revision))
     return opened_files
 
