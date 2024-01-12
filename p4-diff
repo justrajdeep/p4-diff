@@ -5,6 +5,7 @@ import os
 import subprocess
 import argparse
 import tempfile
+from pprint import pprint
 
 Verbose = False
 Ticket = None
@@ -22,9 +23,16 @@ def userHasPerforce():
         return True
     return False
 
+def get_diff_tool():
+    my_env = os.environ.copy()
+    my_diff_tool = "diff"
+    if 'P4DIFF' in my_env.keys():
+        my_diff_tool = my_env["P4DIFF"]
+    return my_diff_tool
+
 def override_env():
     my_env = os.environ.copy()
-    my_env["P4DIFF"] = 'diff'
+    my_env["P4DIFF"] = get_diff_tool()
     return my_env
 
 def runCommand(cmd):
@@ -46,10 +54,12 @@ def convertDepotPathToLocal(depot_path):
     return out[2].strip()
 
 def generateFileDiff(new,newfile):
+    my_env = os.environ.copy()
+    my_diff_tool = get_diff_tool()
     if new:
-        command = ['diff','-u','/dev/null',newfile]
+        command = [my_diff_tool,'-u','/dev/null',newfile]
     else:
-        command = ['diff','-u',newfile,'/dev/null']
+        command = [my_diff_tool,'-u',newfile,'/dev/null']
     (diff,_) = runCommand(command)
     print diff
     return diff
@@ -58,6 +68,7 @@ def generateAddedFileDiffFromShelved(changelist,depot_path):
     # p4 print adds an extra newline only for symlinks, so we have to check the
     # file type and remove it in this case.
     command = getP4Command() + ['fstat','-T','headType','{}@={}'.format(depot_path,changelist)]
+    my_diff_tool = get_diff_tool()
     (content,_) = runCommand(command)
     fileType = content.split('\n')[0].split(' ')[2]
     command = getP4Command() + ['print','-q','{}@={}'.format(depot_path,changelist)]
@@ -69,7 +80,7 @@ def generateAddedFileDiffFromShelved(changelist,depot_path):
     else:
         tmpfile.write(content)
     tmpfile.close()
-    command = ['diff','-u','/dev/null',tmp.name]
+    command = [my_diff_tool,'-u','/dev/null',tmp.name]
     (diff,_) = runCommand(command)
     lines = diff.split('\n')
     # replace tmp file name with the depot one for clarity
@@ -80,6 +91,7 @@ def generateDeletedFileDiffFromShelved(changelist,depot_path,file_revision):
     # p4 print adds an extra newline only for symlinks, so we have to check the
     # file type and remove it in this case.
     command = getP4Command() + ['fstat','-T','headType','{}#{}'.format(depot_path,file_revision)]
+    my_diff_tool = get_diff_tool()
     (content,_) = runCommand(command)
     fileType = content.split('\n')[0].split(' ')[2]
     command = getP4Command() + ['print','-q','{}#{}'.format(depot_path,file_revision)]
@@ -91,7 +103,7 @@ def generateDeletedFileDiffFromShelved(changelist,depot_path,file_revision):
     else:
         tmpfile.write(content)
     tmpfile.close()
-    command = ['diff','-u',tmp.name,'/dev/null']
+    command = [my_diff_tool,'-u',tmp.name,'/dev/null']
     (diff,_) = runCommand(command)
     lines = diff.split('\n')
     # replace tmp file name with the depot one for clarity
