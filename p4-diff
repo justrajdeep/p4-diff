@@ -1,7 +1,8 @@
-#!/usr/bin/env -S uv run python3
+#!/home/utils/coreutils-9.4/bin/env -S /home/utils/uv-0.10.11/bin/uv run --script
 
 import sys
 import os
+import shlex
 import subprocess
 import argparse
 import tempfile
@@ -24,10 +25,16 @@ def userHasPerforce():
 
 def get_diff_tool():
     my_env = os.environ.copy()
-    my_diff_tool = "diff"
-    if 'P4DIFF' in my_env.keys():
-        my_diff_tool = my_env["P4DIFF"]
+    my_diff_tool = "diff -NauBb"
+    if 'P4_DIFF_TOOL' in my_env.keys():
+        my_diff_tool = my_env["P4_DIFF_TOOL"]
     return my_diff_tool
+
+
+def get_diff_tool_argv():
+    """Argv prefix for external diff; set P4_DIFF_TOOL e.g. ``diff -u``."""
+    return shlex.split(get_diff_tool(), posix=True)
+
 
 def override_env():
     my_env = os.environ.copy()
@@ -78,11 +85,11 @@ def p4_print_revision_to_temp(revision_spec):
     return tmp.name
 
 def generateFileDiff(new,newfile):
-    my_diff_tool = get_diff_tool()
+    prefix = get_diff_tool_argv()
     if new:
-        command = [my_diff_tool,'-u','/dev/null',newfile]
+        command = prefix + ["/dev/null", newfile]
     else:
-        command = [my_diff_tool,'-u',newfile,'/dev/null']
+        command = prefix + [newfile, "/dev/null"]
     (diff,_) = runCommand(command)
     print(diff)
     return diff
@@ -90,8 +97,7 @@ def generateFileDiff(new,newfile):
 def generateAddedFileDiffFromShelved(changelist, depot_path):
     spec = '{}@={}'.format(depot_path, changelist)
     tmp_name = p4_print_revision_to_temp(spec)
-    my_diff_tool = get_diff_tool()
-    command = [my_diff_tool, '-u', '/dev/null', tmp_name]
+    command = get_diff_tool_argv() + ["/dev/null", tmp_name]
     (diff, _) = runCommand(command)
     lines = diff.split('\n')
     # replace tmp file name with the depot one for clarity
@@ -101,8 +107,7 @@ def generateAddedFileDiffFromShelved(changelist, depot_path):
 def generateDeletedFileDiffFromShelved(changelist, depot_path, file_revision):
     spec = '{}#{}'.format(depot_path, file_revision)
     tmp_name = p4_print_revision_to_temp(spec)
-    my_diff_tool = get_diff_tool()
-    command = [my_diff_tool, '-u', tmp_name, '/dev/null']
+    command = get_diff_tool_argv() + [tmp_name, "/dev/null"]
     (diff, _) = runCommand(command)
     lines = diff.split('\n')
     # replace tmp file name with the depot one for clarity
@@ -126,8 +131,7 @@ def generateShelvedVsLocalDiff(changelist, depot_path, operation, file_revision)
     tmp_name = p4_print_revision_to_temp(spec)
     local_path = convertDepotPathToLocal(depot_path)
     left_path = local_path if os.path.isfile(local_path) else '/dev/null'
-    my_diff_tool = get_diff_tool()
-    command = [my_diff_tool, '-u', left_path, tmp_name]
+    command = get_diff_tool_argv() + [left_path, tmp_name]
     (diff, _) = runCommand(command)
     lines = diff.split('\n')
     if len(lines) >= 2:

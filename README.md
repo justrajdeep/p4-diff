@@ -83,9 +83,15 @@ This is the mode to use when you care about **your tree vs the shelf**, not **`p
 
 **Note:** This is **similar in spirit** to **`p4 diff file@=CL`** for edits, but implemented as **`diff`** on **`p4 print`** output vs the file on disk, so whitespace or encoding handling may not match Perforce’s internal diff exactly.
 
-## Environment: `P4DIFF`
+## Environment: `P4_DIFF_TOOL`
 
-Before each `p4` subprocess, the script copies your environment and sets **`P4DIFF`** to `diff` unless **`P4DIFF`** is already set. That controls which program `p4` uses when it needs an external diff. Your plain `diff -u` invocations for add/delete still use the string `diff` from `get_diff_tool()` (same default / same override).
+Before each `p4` subprocess, the script copies your environment and sets **`P4DIFF`** to `diff -NauBb` by default. It deliberately ignores an ambient **`P4DIFF`** such as `p4merge`, because `p4 diff -du` passes diff flags that GUI tools may reject.
+
+To override the text diff tool for this script only, set **`P4_DIFF_TOOL`**:
+
+```bash
+P4_DIFF_TOOL='diff -u' ./p4-diff -c 123456
+```
 
 ## Shelved vs local workspace
 
